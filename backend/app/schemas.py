@@ -60,6 +60,7 @@ class QuestionOut(BaseModel):
     question_index: int
     question_text: str
     category: Optional[str]
+    is_followup: bool = False 
 
     class Config:
         from_attributes = True
@@ -191,6 +192,117 @@ class SessionDetailResponse(BaseModel):
     questions: List[QuestionSummary]
     created_at: datetime
     completed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+# ─── RESUME / ABANDON SCHEMAS ─────────────────────────────────────────────────
+
+class ResumeSessionResponse(BaseModel):
+    session_id: UUID
+    role: str
+    level: str
+    interview_type: str
+    difficulty: str
+    current_question: QuestionOut
+    questions_answered: int
+    total_questions: int
+    timer_enabled: bool
+    time_per_question: Optional[int]
+
+    class Config:
+        from_attributes = True
+
+
+class AbandonSessionResponse(BaseModel):
+    session_id: UUID
+    message: str = "Session abandoned successfully"
+# ─── STATS SCHEMAS ────────────────────────────────────────────────────────────
+
+class ScoreTrendItem(BaseModel):
+    session_id: UUID
+    role: str
+    total_score: float
+    created_at: datetime
+
+class InterviewStatsResponse(BaseModel):
+    total_interviews: int
+    completed_interviews: int
+    abandoned_interviews: int
+    average_score: Optional[float]
+    best_score: Optional[float]
+    worst_score: Optional[float]
+    most_practiced_role: Optional[str]
+    score_trend: List[ScoreTrendItem]
+    average_by_type: dict
+    average_by_difficulty: dict
+# ─── PROFILE SCHEMAS ──────────────────────────────────────────────────────────
+
+class CertificationItem(BaseModel):
+    name: str
+    issuer: Optional[str] = None
+    year: Optional[int] = None
+
+
+class ProfileUpdateRequest(BaseModel):
+    bio: Optional[str] = Field(None, max_length=1000)
+    career_goal: Optional[str] = Field(None, max_length=500)
+    target_role: Optional[str] = Field(None, max_length=255)
+    location: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
+    github_url: Optional[str] = Field(None, max_length=500)
+    linkedin_url: Optional[str] = Field(None, max_length=500)
+    leetcode_url: Optional[str] = Field(None, max_length=500)
+    codechef_url: Optional[str] = Field(None, max_length=500)
+    portfolio_url: Optional[str] = Field(None, max_length=500)
+    skills: Optional[List[str]] = None
+    certifications: Optional[List[CertificationItem]] = None
+
+
+class ProfileResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    bio: Optional[str]
+    career_goal: Optional[str]
+    target_role: Optional[str]
+    location: Optional[str]
+    phone: Optional[str]
+    github_url: Optional[str]
+    linkedin_url: Optional[str]
+    leetcode_url: Optional[str]
+    codechef_url: Optional[str]
+    portfolio_url: Optional[str]
+    skills: Optional[List[str]]
+    certifications: Optional[List[CertificationItem]]
+    profile_strength: Optional[float]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+# ─── ROADMAP SCHEMAS ───────────────────────────────────────────────────────────
+
+class RoadmapGenerateRequest(BaseModel):
+    target_role: str = Field(..., min_length=1, max_length=255)
+    experience_level: ExperienceLevel
+    current_skills: Optional[List[str]] = []
+
+
+class RoadmapListItem(BaseModel):
+    id: UUID
+    target_role: str
+    experience_level: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RoadmapResponse(BaseModel):
+    id: UUID
+    target_role: str
+    experience_level: str
+    roadmap_data: dict
+    created_at: datetime
 
     class Config:
         from_attributes = True

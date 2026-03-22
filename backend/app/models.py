@@ -32,6 +32,7 @@ class Difficulty(str, enum.Enum):
 class SessionStatus(str, enum.Enum):
     in_progress = "in_progress"
     completed = "completed"
+    abandoned = "abandoned"
 
 
 class User(Base):
@@ -72,6 +73,9 @@ class InterviewSession(Base):
     )
 
 
+
+
+
 class InterviewQuestion(Base):
     __tablename__ = "interview_questions"
 
@@ -91,5 +95,41 @@ class InterviewQuestion(Base):
     weaknesses = Column(Text, nullable=True)
     improvement_suggestions = Column(Text, nullable=True)
     answered_at = Column(DateTime, nullable=True)
+    is_followup = Column(Boolean, default=False, nullable=False)        # ← new
+    parent_question_id = Column(UUID(as_uuid=True), nullable=True)      # ← new
 
     session = relationship("InterviewSession", back_populates="questions")
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    bio = Column(Text, nullable=True)
+    career_goal = Column(String(500), nullable=True)
+    target_role = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    github_url = Column(String(500), nullable=True)
+    linkedin_url = Column(String(500), nullable=True)
+    leetcode_url = Column(String(500), nullable=True)
+    codechef_url = Column(String(500), nullable=True)
+    portfolio_url = Column(String(500), nullable=True)
+    skills = Column(Text, nullable=True)           # stored as comma-separated
+    certifications = Column(Text, nullable=True)   # stored as JSON string
+    profile_strength = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    user = relationship("User", backref="profile")
+class Roadmap(Base):
+    __tablename__ = "roadmaps"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    target_role = Column(String(255), nullable=False)
+    current_skills = Column(Text, nullable=True)
+    experience_level = Column(SAEnum(ExperienceLevel), nullable=False)
+    roadmap_data = Column(Text, nullable=False)  # JSON string
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    user = relationship("User", backref="roadmaps")

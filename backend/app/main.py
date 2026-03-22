@@ -3,6 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import engine, Base
 from app.routers import interview, auth
+from app.routers import interview, auth, profile  # ← add profile
+from app.routers import interview, auth, profile, roadmap
+
+
+
+
 
 # Create all tables
 Base.metadata.create_all(bind=engine)
@@ -14,7 +20,11 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+app.include_router(auth.router)
+app.include_router(interview.router)
 
+app.include_router(profile.router)   # ← add this
+app.include_router(roadmap.router)
 # CORS
 app.add_middleware(
     CORSMiddleware,

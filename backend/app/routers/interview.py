@@ -162,3 +162,53 @@ def get_session_detail(
         created_at=session.created_at,
         completed_at=session.completed_at
     )
+@router.get("/session/{session_id}/resume", response_model=schemas.ResumeSessionResponse)
+def resume_interview(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    import uuid
+    session, current_question, answered_count = interview_service.resume_session(
+        db=db,
+        session_id=uuid.UUID(session_id),
+        user_id=current_user.id
+    )
+    return schemas.ResumeSessionResponse(
+        session_id=session.id,
+        role=session.role,
+        level=session.level,
+        interview_type=session.interview_type,
+        difficulty=session.difficulty,
+        current_question=schemas.QuestionOut.from_orm(current_question),
+        questions_answered=answered_count,
+        total_questions=session.question_count,
+        timer_enabled=session.timer_enabled,
+        time_per_question=session.time_per_question
+    )
+
+
+@router.patch("/session/{session_id}/abandon", response_model=schemas.AbandonSessionResponse)
+def abandon_interview(
+    session_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    import uuid
+    session = interview_service.abandon_session(
+        db=db,
+        session_id=uuid.UUID(session_id),
+        user_id=current_user.id
+    )
+    return schemas.AbandonSessionResponse(session_id=session.id)
+@router.get("/stats", response_model=schemas.InterviewStatsResponse)
+def get_stats(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    stats = interview_service.get_interview_stats(
+        db=db,
+        user_id=current_user.id
+    )
+    return schemas.InterviewStatsResponse(**stats)
+    

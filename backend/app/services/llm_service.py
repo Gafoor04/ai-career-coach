@@ -5,8 +5,8 @@ from typing import List, Dict, Any
 from fastapi import HTTPException, status
 from app.config import settings
 from app.utils.prompts import get_question_generation_prompt, get_evaluation_prompt
-
-# Configure Gemini
+from app.utils.prompts import get_question_generation_prompt, get_evaluation_prompt, get_followup_prompt
+from app.utils.prompts import get_question_generation_prompt, get_evaluation_prompt, get_followup_prompt, get_roadmap_prompt
 genai.configure(api_key=settings.GEMINI_API_KEY)
 model = genai.GenerativeModel(settings.LLM_MODEL)
 
@@ -120,3 +120,51 @@ def evaluate_answer(
         data[score_field] = max(0.0, min(10.0, float(data[score_field])))
 
     return data
+def generate_followup_question(
+    original_question: str,
+    user_answer: str,
+    weaknesses: str,
+    role: str,
+    level: str
+) -> Dict[str, str]:
+    """Generate a follow-up question for a weak answer."""
+    prompt = get_followup_prompt(
+        original_question, user_answer, weaknesses, role, level
+    )
+
+    try:
+        response = model.generate_content(prompt)
+        raw_text = response.text
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI service error: {str(e)}"
+        )
+
+    data = _parse_json_safe(raw_text)
+
+    if "question_text" not in data:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="AI returned malformed follow-up question"
+        )
+
+    return data
+def generate_roadmap(
+    target_role: str,
+    experience_level: str,
+    current_skills: list
+) -> dict:
+    """Generate a career roadmap via Gemini."""
+    prompt = get_roadmap_prompt(target_role, current_skills, experience_level)
+
+    try:
+        response = model.generate_content(prompt)
+        raw_text = response.text
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"AI service error: {str(e)}"
+        )
+
+    return _parse_json_safe(raw_text)
