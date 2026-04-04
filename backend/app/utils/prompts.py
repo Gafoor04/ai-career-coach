@@ -3,8 +3,29 @@ def get_question_generation_prompt(
     level: str,
     interview_type: str,
     difficulty: str,
-    count: int
+    count: int,
+    mode: str = "interview"
 ) -> str:
+    mode_instruction = ""
+
+    if mode == "learning":
+        mode_instruction = """
+    You are a friendly AI interview coach.
+
+    - Ask questions but allow learning
+    - Keep tone supportive
+    - Slightly guide the user if needed
+    - Focus on helping understanding
+    """
+    else:
+        mode_instruction = """
+    You are a strict technical interviewer.
+
+    - Ask direct questions
+    - Do NOT give hints
+    - Do NOT guide the user
+    - Focus only on evaluation
+    """
     level_context = {
         "fresher": "0-1 years of experience, recently graduated",
         "mid": "2-4 years of experience, has worked on real projects",
@@ -18,7 +39,9 @@ def get_question_generation_prompt(
         "system_design": "designing scalable systems, architecture decisions, trade-offs"
     }
 
-    return f"""You are an expert technical interviewer at a top tech company.
+    return f"""{mode_instruction}
+
+
 
 Generate exactly {count} {difficulty}-difficulty interview questions for the following candidate profile:
 - Role: {role}
@@ -51,7 +74,8 @@ def get_evaluation_prompt(
     user_answer: str,
     role: str,
     level: str,
-    interview_type: str
+    interview_type: str,
+    mode: str = "interview"
 ) -> str:
     return f"""You are an expert technical interviewer evaluating a candidate's interview answer.
 
@@ -82,7 +106,23 @@ Scoring guide:
 - 0-2: Very poor or irrelevant answer
 
 You MUST respond with ONLY valid JSON. No explanation, no preamble, no markdown.
+Also extract weak and strong topics.
 
+Return weak_topics and strong_topics as STRICT 1-word keywords only.
+
+Rules:
+- Only single words (no phrases)
+- Examples: "api", "network", "database"
+- Do NOT return phrases like "REST API" or "HTTP methods"
+- Maximum 5 topics
+
+Example:
+weak_topics: ["database", "api design"]
+strong_topics: ["arrays", "basics"]
+
+Do NOT return sentences.
+Do NOT explain.
+Only return clean topic keywords.
 Response format:
 {{
   "technical_score": <float 0-10>,
@@ -92,14 +132,17 @@ Response format:
   "structure_score": <float 0-10>,
   "strengths": "<2-3 sentences describing what was done well>",
   "weaknesses": "<2-3 sentences describing what was lacking>",
-  "improvement_suggestions": "<1-2 specific, actionable suggestions to improve the answer>"
+  "weak_topics": ["keyword1", "keyword2"],
+  "strong_topics": ["keyword1", "keyword2"],
+  "improvement_suggestions": "<1-2 specific, actionable suggestions>"
 }}"""
 def get_followup_prompt(
     original_question: str,
     user_answer: str,
     weaknesses: str,
     role: str,
-    level: str
+    level: str,
+    mode: str = "interview"
 ) -> str:
     return f"""You are an expert interviewer conducting a real interview.
 

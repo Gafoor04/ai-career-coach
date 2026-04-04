@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy import JSON
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean,
@@ -44,7 +45,11 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+
     sessions = relationship("InterviewSession", back_populates="user", cascade="all, delete-orphan")
+    weak_topics = Column(JSON, default=[])
+    strong_topics = Column(JSON, default=[])
+    interview_count = Column(Integer, default=0)
 
 
 class InterviewSession(Base):
@@ -53,6 +58,7 @@ class InterviewSession(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     role = Column(String(255), nullable=False)
+    mode = Column(String(50), default="interview")
     level = Column(SAEnum(ExperienceLevel), nullable=False)
     interview_type = Column(SAEnum(InterviewType), nullable=False)
     difficulty = Column(SAEnum(Difficulty), nullable=False)
