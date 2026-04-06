@@ -26,7 +26,8 @@ def start_interview(
         difficulty=request.difficulty,
         question_count=request.question_count,
         timer_enabled=request.timer_enabled,
-        time_per_question=request.time_per_question
+        time_per_question=request.time_per_question,
+        mode=request.mode
     )
     first_question = session.questions[0]
     return schemas.InterviewStartResponse(
@@ -65,7 +66,9 @@ def submit_answer(
             overall_score=overall_score,
             strengths=evaluation["strengths"],
             weaknesses=evaluation["weaknesses"],
-            improvement_suggestions=evaluation["improvement_suggestions"]
+            improvement_suggestions=evaluation["improvement_suggestions"],
+            explanation=evaluation.get("explanation"),
+            teaching_note=evaluation.get("teaching_note")
         ),
         next_question=schemas.QuestionOut.from_orm(next_question) if next_question else None,
         is_last_question=is_last,

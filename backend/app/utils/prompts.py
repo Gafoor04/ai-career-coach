@@ -57,12 +57,17 @@ Requirements for the questions:
 6. No duplicate or very similar questions
 
 You MUST respond with ONLY valid JSON. No explanation, no preamble, no markdown code blocks.
+Also generate TWO progressive hints for each question:
+- hint_level_1: very small clue (1 line)
+- hint_level_2: deeper guidance (1-2 lines)
 
 Response format:
 {{
   "questions": [
     {{
       "question_text": "The full question text here",
+      "hint_level_1": "Short clue (1 line)",
+      "hint_level_2": "Slightly deeper guidance (1-2 lines)",
       "category": "One of: Databases, APIs, System Design, Security, Performance, Architecture, Frontend, Backend, DevOps, Soft Skills, Leadership, Problem Solving, Algorithms, Networking, Cloud"
     }}
   ]
@@ -77,7 +82,16 @@ def get_evaluation_prompt(
     interview_type: str,
     mode: str = "interview"
 ) -> str:
-    return f"""You are an expert technical interviewer evaluating a candidate's interview answer.
+    mode_instruction = ""
+
+    if mode == "learning":
+        mode_instruction = """
+    LEARNING MODE:
+    - In addition to evaluation, teach the concept
+    - Provide a clear explanation of the correct answer
+    - Give a helpful teaching note
+    """
+    return f"""{mode_instruction}You are an expert technical interviewer evaluating a candidate's interview answer.
 
 CANDIDATE PROFILE:
 - Role: {role}
@@ -130,11 +144,14 @@ Response format:
   "clarity_score": <float 0-10>,
   "relevance_score": <float 0-10>,
   "structure_score": <float 0-10>,
-  "strengths": "<2-3 sentences describing what was done well>",
-  "weaknesses": "<2-3 sentences describing what was lacking>",
-  "weak_topics": ["keyword1", "keyword2"],
-  "strong_topics": ["keyword1", "keyword2"],
-  "improvement_suggestions": "<1-2 specific, actionable suggestions>"
+  "strengths": "...",
+  "weaknesses": "...",
+  "weak_topics": ["..."],
+  "strong_topics": ["..."],
+  "improvement_suggestions": "...",
+
+  "explanation": "Explain the correct concept clearly",
+  "teaching_note": "Give a helpful learning tip"
 }}"""
 def get_followup_prompt(
     original_question: str,

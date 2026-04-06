@@ -47,6 +47,7 @@ class InterviewStartRequest(BaseModel):
     question_count: int = Field(..., ge=1, le=15)
     timer_enabled: bool = False
     time_per_question: Optional[int] = Field(None, ge=30, le=300)
+    mode: Optional[str] = "interview"
 
     @validator("time_per_question", always=True)
     def validate_timer(cls, v, values):
@@ -61,6 +62,8 @@ class QuestionOut(BaseModel):
     question_text: str
     category: Optional[str]
     is_followup: bool = False 
+    hint_level_1: Optional[str] = None
+    hint_level_2: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -88,6 +91,8 @@ class EvaluationResult(BaseModel):
     relevance_score: float = Field(..., ge=0, le=10)
     structure_score: float = Field(..., ge=0, le=10)
     overall_score: float = Field(..., ge=0, le=10)
+    explanation: Optional[str] = None
+    teaching_note: Optional[str] = None
     strengths: str
     weaknesses: str
     improvement_suggestions: str

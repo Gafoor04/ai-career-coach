@@ -90,6 +90,8 @@ class InterviewQuestion(Base):
     question_index = Column(Integer, nullable=False)
     question_text = Column(Text, nullable=False)
     category = Column(String(255), nullable=True)
+    hint_level_1 = Column(Text, nullable=True)
+    hint_level_2 = Column(Text, nullable=True)
     user_answer = Column(Text, nullable=True)
     technical_score = Column(Float, nullable=True)
     depth_score = Column(Float, nullable=True)

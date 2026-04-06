@@ -99,6 +99,10 @@ def generate_questions(
                 detail="AI returned malformed question structure."
             )
 
+        # ✅ THESE MUST BE OUTSIDE raise
+        q["hint_level_1"] = q.get("hint_level_1", "")
+        q["hint_level_2"] = q.get("hint_level_2", "")
+
     return questions[:count]
 
 def clean_topics(topics):
@@ -147,6 +151,8 @@ def evaluate_answer(
         )
 
     data = _parse_json_safe(raw_text)
+    data["explanation"] = data.get("explanation", "")
+    data["teaching_note"] = data.get("teaching_note", "")
 
     required_fields = [
         "technical_score", "depth_score", "clarity_score",

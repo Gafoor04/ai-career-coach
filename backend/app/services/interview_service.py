@@ -22,6 +22,7 @@ def create_session_with_questions(
 ) -> models.InterviewSession:
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
+    print("CREATING SESSION MODE:", mode)
 
     weak_topics = user.weak_topics if user else []
     strong_topics = user.strong_topics if user else []
@@ -59,6 +60,8 @@ def create_session_with_questions(
             question_index=idx,
             question_text=q_data["question_text"],
             category=q_data.get("category"),
+            hint_level_1=q_data.get("hint_level_1"),
+            hint_level_2=q_data.get("hint_level_2"),
         )
         db.add(question)
 
@@ -79,6 +82,7 @@ def submit_answer_and_evaluate(
         models.InterviewSession.id == session_id,
         models.InterviewSession.user_id == user_id
     ).first()
+    print("SESSION MODE:", session.mode)
 
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -97,59 +101,49 @@ def submit_answer_and_evaluate(
     if question.user_answer is not None:
         raise HTTPException(status_code=400, detail="Question already answered")
 
-    # 🔥 Evaluate
-    evaluation = llm_service.evaluate_answer(
-        question_text=question.question_text,
-        user_answer=answer,
-        role=session.role,
-        level=session.level,
-        interview_type=session.interview_type,
-        mode="interview"
-    )
-
-    overall = calculate_overall_score(
-        technical=evaluation["technical_score"],
-        depth=evaluation["depth_score"],
-        clarity=evaluation["clarity_score"],
-        relevance=evaluation["relevance_score"],
-        structure=evaluation["structure_score"]
-    )
-
-    # 🔥 Save answer
-    question.user_answer = answer
-    question.technical_score = evaluation["technical_score"]
-    question.depth_score = evaluation["depth_score"]
-    question.clarity_score = evaluation["clarity_score"]
-    question.relevance_score = evaluation["relevance_score"]
-    question.structure_score = evaluation["structure_score"]
-    question.overall_score = overall
-    question.strengths = evaluation["strengths"]
-    question.weaknesses = evaluation["weaknesses"]
-    question.improvement_suggestions = evaluation["improvement_suggestions"]
-    question.answered_at = datetime.utcnow()
-
-    # 🔥 Memory update
-    user = db.query(models.User).filter(models.User.id == user_id).first()
-    if user:
-        weak_topics = evaluation.get("weak_topics", [])
-        strong_topics = evaluation.get("strong_topics", [])
-
-        user.weak_topics = list(set((user.weak_topics or []) + weak_topics))
-        user.strong_topics = list(set((user.strong_topics or []) + strong_topics))
-        user.interview_count = (user.interview_count or 0) + 1
-
-    db.commit()  # ✅ IMPORTANT
-
-    # 🔥 Correct answered count AFTER commit
-    answered_count = db.query(models.InterviewQuestion).filter(
-        models.InterviewQuestion.session_id == session_id,
-        models.InterviewQuestion.user_answer.isnot(None)
-    ).count()
-
     # =========================
-    # 🔥 FINAL MODE (HARD BLOCK)
+    # 🔥 FINAL MODE (STRICT PATH)
     # =========================
     if session.mode == "final":
+
+        evaluation = llm_service.evaluate_answer(
+            question_text=question.question_text,
+            user_answer=answer,
+            role=session.role,
+            level=session.level,
+            interview_type=session.interview_type,
+            mode="final"   # 👈 IMPORTANT
+        )
+
+        overall = calculate_overall_score(
+            technical=evaluation["technical_score"],
+            depth=evaluation["depth_score"],
+            clarity=evaluation["clarity_score"],
+            relevance=evaluation["relevance_score"],
+            structure=evaluation["structure_score"]
+        )
+
+        # ✅ SAVE ANSWER (same as before)
+        question.user_answer = answer
+        question.technical_score = evaluation["technical_score"]
+        question.depth_score = evaluation["depth_score"]
+        question.clarity_score = evaluation["clarity_score"]
+        question.relevance_score = evaluation["relevance_score"]
+        question.structure_score = evaluation["structure_score"]
+        question.overall_score = overall
+        question.strengths = evaluation["strengths"]
+        question.weaknesses = evaluation["weaknesses"]
+        question.improvement_suggestions = evaluation["improvement_suggestions"]
+        question.answered_at = datetime.utcnow()
+
+        db.commit()
+
+        # 🔥 NEXT QUESTION ONLY (NO FOLLOW-UP EXIST HERE)
+        answered_count = db.query(models.InterviewQuestion).filter(
+            models.InterviewQuestion.session_id == session_id,
+            models.InterviewQuestion.user_answer.isnot(None)
+        ).count()
+
         next_question = db.query(models.InterviewQuestion).filter(
             models.InterviewQuestion.session_id == session_id,
             models.InterviewQuestion.user_answer.is_(None)
@@ -164,6 +158,60 @@ def submit_answer_and_evaluate(
             db.commit()
 
         return evaluation, overall, next_question, is_last, answered_count
+
+    # =========================
+    # 🔥 NORMAL MODE EVALUATION (ADD THIS)
+    # =========================
+
+    evaluation = llm_service.evaluate_answer(
+        question_text=question.question_text,
+        user_answer=answer,
+        role=session.role,
+        level=session.level,
+        interview_type=session.interview_type,
+        mode=session.mode
+    )
+
+    overall = calculate_overall_score(
+        technical=evaluation["technical_score"],
+        depth=evaluation["depth_score"],
+        clarity=evaluation["clarity_score"],
+        relevance=evaluation["relevance_score"],
+        structure=evaluation["structure_score"]
+    )
+
+    # SAVE ANSWER
+    question.user_answer = answer
+    question.technical_score = evaluation["technical_score"]
+    question.depth_score = evaluation["depth_score"]
+    question.clarity_score = evaluation["clarity_score"]
+    question.relevance_score = evaluation["relevance_score"]
+    question.structure_score = evaluation["structure_score"]
+    question.overall_score = overall
+    question.strengths = evaluation["strengths"]
+    question.weaknesses = evaluation["weaknesses"]
+    question.improvement_suggestions = evaluation["improvement_suggestions"]
+    question.answered_at = datetime.utcnow()
+
+    # MEMORY UPDATE
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user:
+        weak_topics = evaluation.get("weak_topics", [])
+        strong_topics = evaluation.get("strong_topics", [])
+
+        user.weak_topics = list(set((user.weak_topics or []) + weak_topics))
+        user.strong_topics = list(set((user.strong_topics or []) + strong_topics))
+        user.interview_count = (user.interview_count or 0) + 1
+
+    db.commit()
+
+    # NOW count answers
+    answered_count = db.query(models.InterviewQuestion).filter(
+        models.InterviewQuestion.session_id == session_id,
+        models.InterviewQuestion.user_answer.isnot(None)
+    ).count()
+
+   
 
     # =========================
     # 🔥 NORMAL MODE
@@ -181,7 +229,7 @@ def submit_answer_and_evaluate(
             weaknesses=evaluation["weaknesses"],
             role=session.role,
             level=session.level,
-            mode="interview"
+            mode=session.mode
         )
 
         followup = models.InterviewQuestion(
